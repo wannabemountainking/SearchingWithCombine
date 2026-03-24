@@ -40,7 +40,7 @@ final class MusicViewModel {
         URLSession.shared.dataTaskPublisher(for: url)
             .subscribe(on: DispatchQueue.global(qos: .background))
             .receive(on: DispatchQueue.main)
-            .
+            
         
     }
     
