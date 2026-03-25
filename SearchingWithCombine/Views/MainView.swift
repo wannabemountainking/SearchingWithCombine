@@ -8,8 +8,28 @@
 import SwiftUI
 
 struct MainView: View {
+    
+    @State private var vm: MusicViewModel = .init()
+    @State private var searchText: String = ""
+    @State private var hasNoResult: Bool = false
+    @State private var isSearching: Bool = false
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        NavigationStack {
+
+            
+            VStack(alignment: .leading, spacing: 20) {
+                if isSearching {
+                    
+                } else if hasNoResult {
+                    
+                } else {
+                    
+                }
+                
+            }
+            Spacer()
+        }
     }
 }
 
