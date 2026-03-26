@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 /*
  **API**: iTunes Search API — `https://itunes.apple.com/search?term={query}&limit=10`
@@ -27,40 +28,38 @@ final class MusicViewModel {
     var musics: [Result] = []
     var numberOfResults: Int = 0
     var errorMessage: String = ""
-    
-    var cancellables: Set<AnyCancellable> = Set<AnyCancellable>()
-    
-    func fetchResults(searchText: String) throws {
-        let endPoint = "https://itunes.apple.com/search?term=\(searchText)&limit=10"
-        guard let url = URL(string: endPoint) else {
-            throw NetworkError.invalidURL
+    var searchTextColor: Color = .black
+    var searchText = "" {
+        didSet {
+            searchTextSubject.send(searchText)
         }
-        
-        loadMusicData(url: url)
     }
     
+    private let searchTextSubject = PassthroughSubject<String, Never>()
     
-    func loadMusicData(url: URL) {
-        URLSession.shared.dataTaskPublisher(for: url)
-            .subscribe(on: DispatchQueue.global(qos: .background))
-            .tryMap(handleResponse)
-            .mapError { error in
-                return error as? NetworkError ?? .invalidData
+    private var cancellables: Set<AnyCancellable> = Set<AnyCancellable>()
+    
+    init() {
+        searchTextSubject
+            .debounce(for: .seconds(0.5), scheduler: RunLoop.main)
+            .removeDuplicates()
+            .compactMap { URL(string: "https://itunes.apple.com/search?term=\($0)&limit=10") }
+            .map { url in
+                URLSession.shared.dataTaskPublisher(for: url)
+                    .subscribe(on: DispatchQueue.global(qos: .background))
+                    .tryMap(self.handleResponse)
+                    .mapError { $0 as? NetworkError ?? .invalidData }
+                    .eraseToAnyPublisher()
             }
+            .switchToLatest()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
                 guard let self else {return}
-                switch completion {
-                case .failure(let error):
-                    switch error {
-                    case .invalidURL: self.errorMessage = error.rawValue
-                    case .invalidResponse: self.errorMessage = error.rawValue
-                    case .invalidData: self.errorMessage = error.rawValue
-                    }
-                case .finished:
-                    break
+                if case .failure(let error) = completion {
+                    self.errorMessage = error.rawValue
                 }
-            } receiveValue: { music in
+            } receiveValue: { [weak self] music in
+                guard let self else {return}
                 self.searchResults = music
                 self.musics = music.results
                 self.numberOfResults = music.resultCount
