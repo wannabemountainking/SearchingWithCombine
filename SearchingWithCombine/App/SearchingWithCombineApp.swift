@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct SearchingWithCombineApp: App {
     var body: some Scene {
         WindowGroup {
             MainView()
+                .modelContainer(for: Track.self)
         }
     }
 }

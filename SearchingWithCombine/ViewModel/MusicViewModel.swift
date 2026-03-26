@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import SwiftData
 
 /*
  **API**: iTunes Search API — `https://itunes.apple.com/search?term={query}&limit=10`
@@ -23,15 +24,17 @@ enum NetworkError: String, Error {
 
 @Observable
 final class MusicViewModel {
-    
     var searchResults: Music? = nil
     var musics: [Result] = []
     var numberOfResults: Int = 0
     var errorMessage: String = ""
     var searchTextColor: Color = .black
+    var hasNoResult: Bool = false
+    var isSearching: Bool = false
     var searchText = "" {
         didSet {
             searchTextSubject.send(searchText)
+            searchTextColor = .blue
         }
     }
     
@@ -57,12 +60,18 @@ final class MusicViewModel {
                 guard let self else {return}
                 if case .failure(let error) = completion {
                     self.errorMessage = error.rawValue
+                    self.searchTextColor = .black
+                    self.isSearching = false
+                    self.hasNoResult = true
                 }
             } receiveValue: { [weak self] music in
                 guard let self else {return}
                 self.searchResults = music
                 self.musics = music.results
                 self.numberOfResults = music.resultCount
+                self.searchTextColor = .black
+                self.isSearching = false
+                self.hasNoResult = (music.resultCount == 0)
             }
             .store(in: &cancellables)
     }
