@@ -26,15 +26,12 @@ struct MainView: View {
                     .background(Color(uiColor: UIColor.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .textFieldStyle(.plain)
-                    .onChange(of: vm.searchText) { oldValue, newValue in
-                        vm.isSearching = true
-                    }
-                if vm.isSearching || vm.hasNoResult {
+                if !vm.searchText.isEmpty {
                     Button("취소") {
                         // cancel action
                         self.vm.searchText = ""
                         self.vm.searchTextColor = Color.black
-//                        self.vm.hasNoResult = true
+                        self.vm.hasNoResult = false
                         self.vm.isSearching = false
                     }
                     .foregroundStyle(.red)
@@ -92,16 +89,11 @@ struct MainView: View {
                                 .padding(20)
                             }
                         }
-                        .onAppear {
-                            vm.musics.forEach {
-                                let track = Track(artist: $0.artistName, trackName: $0.trackName)
-                                self.modelContext.insert(track)
-                            }
-                        }
                     }
                 } else {
                     ContentUnavailableView {
                         Text("\"\(vm.searchText)\"에 대한 검색 결과가 없습니다")
+                        Text(vm.errorMessage)
                     }
                 }
                 
@@ -112,9 +104,13 @@ struct MainView: View {
             Spacer()
             
         } //:NAVIGATION
+        .onAppear {
+            vm.modelContext = self.modelContext
+        }
     }//:body
 }
 
 #Preview {
     MainView()
+        .modelContainer(Track.previewContainer)
 }

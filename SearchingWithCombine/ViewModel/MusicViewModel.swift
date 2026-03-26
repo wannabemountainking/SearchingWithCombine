@@ -24,6 +24,9 @@ enum NetworkError: String, Error {
 
 @Observable
 final class MusicViewModel {
+    
+    var modelContext: ModelContext? = nil
+    
     var searchResults: Music? = nil
     var musics: [Result] = []
     var numberOfResults: Int = 0
@@ -35,6 +38,7 @@ final class MusicViewModel {
         didSet {
             searchTextSubject.send(searchText)
             searchTextColor = .blue
+            isSearching = true
         }
     }
     
@@ -43,10 +47,11 @@ final class MusicViewModel {
     private var cancellables: Set<AnyCancellable> = Set<AnyCancellable>()
     
     init() {
+        
         searchTextSubject
             .debounce(for: .seconds(0.5), scheduler: RunLoop.main)
             .removeDuplicates()
-            .compactMap { URL(string: "https://itunes.apple.com/search?term=\($0)&limit=10") }
+            .compactMap { $0.isEmpty ? nil : URL(string: "https://itunes.apple.com/search?term=\($0)&limit=10") }
             .map { url in
                 URLSession.shared.dataTaskPublisher(for: url)
                     .subscribe(on: DispatchQueue.global(qos: .background))
@@ -71,7 +76,13 @@ final class MusicViewModel {
                 self.numberOfResults = music.resultCount
                 self.searchTextColor = .black
                 self.isSearching = false
-                self.hasNoResult = (music.resultCount == 0)
+                self.hasNoResult = (music.resultCount != 0)
+                
+                guard let modelContext = self.modelContext else {return}
+                self.musics.forEach {
+                    let track = Track(artist: $0.artistName, trackName: $0.trackName)
+                    modelContext.insert(track)
+                }
             }
             .store(in: &cancellables)
     }
